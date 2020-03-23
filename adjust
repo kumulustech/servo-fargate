@@ -136,10 +136,10 @@ class FargateDriver(Adjust):
             if 'replicas' in comp_settings:
                 rep_setts = {} if comp_settings['replicas'] is None else comp_settings['replicas']
                 assert rep_setts.get('type', 'range') == 'range', 'comp {}: range is the only supported type for the replicas setting. Found: {}'.format(component_key, rep_setts.get('type'))
-                assert rep_setts.get('max'), 'comp {}: replicas config requires max be defined when replicas config is defined. Found: {}'.format(component_key,rep_setts.get('max'))
-                assert rep_setts.get('min', 1) > 0, 'comp {}: replicas config min must be greater than 0 when provided. Found: {}'.format(component_key,rep_setts.get('min'))
-                assert rep_setts['max'] >= comp_settings['replicas'].get('min', 1), \
-                    'comp {}: Provided max for replicas setting must be greater than or equal to the default min or provided min: conf min {} conf max {}'.format(component_key,rep_setts.get('min', 1),comp_settings['mem']['max'])
+                assert rep_setts.get('max') is not None, 'comp {}: replicas config requires max be defined when replicas config is defined. Found: {}'.format(component_key,rep_setts.get('max'))
+                assert rep_setts.get('min', 0) >= 0, 'comp {}: replicas config min must be greater than or equal to 0 when provided. Found: {}'.format(component_key,rep_setts.get('min'))
+                assert rep_setts['max'] >= rep_setts.get('min', 0), \
+                    'comp {}: Provided max for replicas setting must be greater than or equal to the default min or provided min: conf min {} conf max {}'.format(component_key,rep_setts.get('min', 0),rep_setts['max'])
                 assert rep_setts.get('step', 1) == 1, 'comp {}: replicas config does not support step other than 1. Found {}'.format(component_key, rep_setts.get('step'))
                 
                 if rep_setts.get('pinned') is not None:
@@ -271,7 +271,7 @@ class FargateDriver(Adjust):
                 repSetting['type'] = 'range'
                 repSetting['step'] = 1
                 if repSetting.get('min') is None:
-                    repSetting['min'] = 1
+                    repSetting['min'] = 0
                 # max is always included in config when replicas config defined
                 if repSetting.get('pinned') is None:
                     repSetting['pinned'] = False
@@ -371,9 +371,9 @@ class FargateDriver(Adjust):
                 task_def['memory'] = str(int(float(new_mem) * 1024))
 
             desired_count = int(s_info['desiredCount'])
-            new_reps = setting_input.pop('replicas', {}).get('value')
+            new_reps = setting_input.pop('replicas', {})
             if new_reps:
-                desired_count = new_reps
+                desired_count = new_reps['value']
 
             # Process env settings, report leftovers with json error
             if comp_config.get('environment'):
